@@ -1,101 +1,209 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import React, { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
+import { Plus, AlertTriangle, FileText, ChevronRight } from "lucide-react";
+import { useApp } from "@/context/AppContext";
+import { QuickNoteCard } from "@/components/QuickNoteCard";
+import { NoteItem, NoteItemData } from "@/components/NoteItem";
+import { EditNoteModal } from "@/components/EditNoteModal";
+import { ProjectIcon } from "@/components/ProjectIcon";
+import { formatTurkishRelativeTime, NoteCategory } from "@/lib/utils";
+
+export default function DashboardPage() {
+  const { projects, setIsNewProjectModalOpen, noteTrigger } = useApp();
+  const [recentNotes, setRecentNotes] = useState<NoteItemData[]>([]);
+  const [isLoadingNotes, setIsLoadingNotes] = useState(true);
+  const [editingNote, setEditingNote] = useState<NoteItemData | null>(null);
+  const [defaultCategory, setDefaultCategory] = useState<NoteCategory>("general");
+
+  const fetchRecentNotes = useCallback(async () => {
+    try {
+      setIsLoadingNotes(true);
+      const res = await fetch("/api/notes?limit=10");
+      if (res.ok) {
+        const data = await res.json();
+        setRecentNotes(data);
+      }
+    } catch (err) {
+      console.error("fetchRecentNotes error:", err);
+    } finally {
+      setIsLoadingNotes(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchRecentNotes();
+  }, [fetchRecentNotes, noteTrigger]);
+
+  const handleQuickAddIssue = () => {
+    setDefaultCategory("issue");
+    // Scroll smoothly to quick note card
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <div className="space-y-6">
+      {/* Top Banner & Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-slate-200/60">
+        <div>
+          <h1 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight flex items-center gap-2">
+            Projeler & Notlar
+          </h1>
+          <p className="text-xs md:text-sm text-slate-500 mt-1">
+            Projelerin için hızlıca not al, eksikleri takip et, fikirlerini kaybetme. 🚀
+          </p>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+
+        {/* Action Buttons */}
+        <div className="flex items-center flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setIsNewProjectModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs md:text-sm font-semibold rounded-xl shadow-xs shadow-blue-500/20 active:scale-98 transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            <span>+ Yeni Proje</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleQuickAddIssue}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs md:text-sm font-medium rounded-xl transition-colors shadow-2xs"
+          >
+            <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />
+            <span>Eksik Ekle</span>
+          </button>
+
+          <Link
+            href="/notes"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs md:text-sm font-medium rounded-xl transition-colors shadow-2xs"
+          >
+            <FileText className="w-3.5 h-3.5 text-slate-500" />
+            <span>Tüm Notlar</span>
+          </Link>
+        </div>
+      </div>
+
+      {/* ⚡ Hızlı Not Ekle Card */}
+      <QuickNoteCard
+        key={defaultCategory}
+        defaultCategory={defaultCategory}
+        onNoteAdded={fetchRecentNotes}
+      />
+
+      {/* Two Column Layout Below */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pt-2">
+        {/* Left Column: Son Eklenen Notlar (7 cols) */}
+        <div className="lg:col-span-7 space-y-3">
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-2">
+              <span className="text-slate-400">📋</span>
+              <h2 className="text-sm font-bold text-slate-800">
+                Bugün Eklenen Notlar ({recentNotes.length})
+              </h2>
+            </div>
+            <Link
+              href="/notes"
+              className="text-xs text-blue-600 hover:text-blue-700 font-medium hover:underline flex items-center gap-0.5"
+            >
+              <span>Tümünü Gör</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          {isLoadingNotes ? (
+            <div className="p-8 text-center text-xs text-slate-400 bg-white border border-slate-200 rounded-2xl">
+              Notlar yükleniyor...
+            </div>
+          ) : recentNotes.length === 0 ? (
+            <div className="p-8 text-center bg-white border border-slate-200 rounded-2xl space-y-2">
+              <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mx-auto text-lg">
+                💡
+              </div>
+              <p className="text-sm font-semibold text-slate-700">Henüz hiç not eklenmedi</p>
+              <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                Yukarıdaki hızlı not ekleme alanını kullanarak aklınıza gelen ilk fikri veya eksikliği anında yazın!
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              {recentNotes.map((note) => (
+                <NoteItem
+                  key={note.id}
+                  note={note}
+                  showProjectBadge={true}
+                  onEdit={(n) => setEditingNote(n)}
+                  onRefresh={fetchRecentNotes}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Right Column: Son Güncellenen Projeler (5 cols) */}
+        <div className="lg:col-span-5 space-y-3">
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-2">
+              <span className="text-slate-400">🔄</span>
+              <h2 className="text-sm font-bold text-slate-800">Son Güncellenen Projeler</h2>
+            </div>
+            <Link
+              href="/projects"
+              className="text-xs text-blue-600 hover:text-blue-700 font-medium hover:underline flex items-center gap-0.5"
+            >
+              <span>Tümü ({projects.length})</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          <div className="space-y-2">
+            {projects.slice(0, 6).map((p) => (
+              <Link
+                key={p.id}
+                href={`/projects/${p.id}`}
+                className="group flex items-center justify-between p-3.5 bg-white border border-slate-200/80 rounded-2xl hover:border-blue-300 hover:shadow-card transition-all"
+              >
+                <div className="flex items-center gap-3 truncate">
+                  <ProjectIcon name={p.name} icon={p.icon} color={p.color} size="md" />
+                  <div className="truncate">
+                    <div className="text-sm font-semibold text-slate-800 group-hover:text-blue-600 transition-colors truncate">
+                      {p.name}
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
+                      <span>{p.totalNotes} not</span>
+                      <span>•</span>
+                      <span>{formatTurkishRelativeTime(p.lastOpenedAt || p.updatedAt)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-500 group-hover:translate-x-0.5 transition-all shrink-0" />
+              </Link>
+            ))}
+
+            {projects.length === 0 && (
+              <div className="p-8 text-center bg-white border border-slate-200 rounded-2xl">
+                <p className="text-xs text-slate-400">Henüz proje oluşturmadınız.</p>
+                <button
+                  onClick={() => setIsNewProjectModalOpen(true)}
+                  className="mt-2 text-xs font-semibold text-blue-600 hover:underline"
+                >
+                  + Yeni Proje Oluştur
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Edit Note Modal */}
+      <EditNoteModal
+        note={editingNote}
+        isOpen={Boolean(editingNote)}
+        onClose={() => setEditingNote(null)}
+        onSuccess={fetchRecentNotes}
+      />
     </div>
   );
 }

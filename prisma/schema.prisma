@@ -1,0 +1,129 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  projects     Project[]
+  notes        Note[]
+  tags         Tag[]
+}
+
+model Project {
+  id           String          @id @default(cuid())
+  userId       String
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  description  String?
+  status       String          @default("active") // "active", "pending", "completed", "archived"
+  icon         String?         @default("folder") // "folder", "whatsapp", "globe", "shopping-cart", "heart", "sparkles", etc.
+  color        String?         @default("#2563eb") // Hex color for project badge/avatar
+  url          String?
+  adminUrl     String?
+  priority     String          @default("normal") // "low", "normal", "high"
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  lastOpenedAt DateTime?
+  archivedAt   DateTime?
+  deletedAt    DateTime?
+
+  links        ProjectLink[]
+  credentials  ProjectCredential[]
+  notes        Note[]
+  tags         ProjectTag[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+model ProjectLink {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  label     String
+  url       String
+  createdAt DateTime @default(now())
+
+  @@index([projectId])
+}
+
+model ProjectCredential {
+  id                String   @id @default(cuid())
+  projectId         String
+  project           Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title             String   @default("Giriş Bilgisi")
+  username          String?
+  encryptedPassword String?
+  notes             String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([projectId])
+}
+
+model Note {
+  id         String    @id @default(cuid())
+  projectId  String
+  project    Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content    String
+  category   String    @default("general") // "general", "idea", "issue", "bug", "improvement"
+  status     String    @default("open")    // "open", "in_progress", "completed"
+  priority   String    @default("normal")  // "low", "normal", "high"
+  isPinned   Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime? // For soft-delete (trash bin & restore)
+
+  tags       NoteTag[]
+
+  @@index([projectId])
+  @@index([userId])
+  @@index([category])
+  @@index([status])
+  @@index([deletedAt])
+}
+
+model Tag {
+  id        String       @id @default(cuid())
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  createdAt DateTime     @default(now())
+
+  projects  ProjectTag[]
+  notes     NoteTag[]
+
+  @@unique([userId, name])
+  @@index([userId])
+}
+
+model ProjectTag {
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tagId     String
+  tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, tagId])
+}
+
+model NoteTag {
+  noteId String
+  note   Note   @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  tagId  String
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([noteId, tagId])
+}

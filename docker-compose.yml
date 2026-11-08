@@ -1,0 +1,28 @@
+version: "3.8"
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: proje_notlar_app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=file:/app/data/prod.db
+      - JWT_SECRET=change-this-super-secret-key-in-production-2026
+      - VAULT_SECRET_KEY=change-this-vault-32char-key!!
+      - NEXT_PUBLIC_APP_URL=http://localhost:3000
+    volumes:
+      - proje_notlar_data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  proje_notlar_data:
+    driver: local
