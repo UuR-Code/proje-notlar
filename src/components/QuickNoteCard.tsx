@@ -1,7 +1,19 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Send, ChevronDown, Lightbulb, AlertTriangle, Bug, Sparkles, FileText, Check } from "lucide-react";
+import {
+  Send,
+  ChevronDown,
+  Lightbulb,
+  AlertTriangle,
+  Bug,
+  Sparkles,
+  FileText,
+  Check,
+  Image as ImageIcon,
+  X,
+  Loader2,
+} from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { useToast } from "./Toast";
 import { ProjectIcon } from "./ProjectIcon";
@@ -29,10 +41,13 @@ export function QuickNoteCard({
   const [content, setContent] = useState("");
   const [category, setCategory] = useState<NoteCategory>(defaultCategory);
   const [priority, setPriority] = useState<"low" | "normal" | "high">("normal");
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Restore draft from localStorage when project changes
   useEffect(() => {
@@ -60,6 +75,59 @@ export function QuickNoteCard({
     }
   };
 
+  // Upload image file
+  const handleFileUpload = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      error("Lütfen sadece resim veya ekran görüntüsü dosyası yükleyin.");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      error("Görsel boyutu en fazla 10MB olabilir.");
+      return;
+    }
+
+    try {
+      setIsUploading(true);
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || "Görsel yüklenemedi");
+      }
+
+      const data = await res.json();
+      setImageUrl(data.url);
+      success("Ekran görüntüsü eklendi!");
+    } catch (err: any) {
+      error(err.message || "Görsel yüklenirken bir hata oluştu");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // Clipboard paste handler for screenshots (Ctrl+V)
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf("image") !== -1) {
+        const file = items[i].getAsFile();
+        if (file) {
+          e.preventDefault();
+          handleFileUpload(file);
+          break;
+        }
+      }
+    }
+  };
+
   // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -73,7 +141,7 @@ export function QuickNoteCard({
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!content.trim() || isSubmitting) return;
+    if ((!content.trim() && !imageUrl) || isSubmitting) return;
 
     if (!selectedProjectId) {
       error("Lütfen önce bir proje seçin veya oluşturun.");
@@ -87,9 +155,10 @@ export function QuickNoteCard({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           projectId: selectedProjectId,
-          content: content.trim(),
+          content: content.trim() || "(Ekran görüntüsü eklendi)",
           category,
           priority,
+          imageUrl: imageUrl || undefined,
         }),
       });
 
@@ -98,11 +167,12 @@ export function QuickNoteCard({
         throw new Error(errData.error || "Not kaydedilemedi");
       }
 
-      // Clear draft & input
+      // Clear draft & input & image
       if (typeof window !== "undefined") {
         localStorage.removeItem(`pn_draft_${selectedProjectId}`);
       }
       setContent("");
+      setImageUrl(null);
       success("Not anında kaydedildi!");
 
       triggerNoteAdded();
@@ -209,11 +279,66 @@ export function QuickNoteCard({
           value={content}
           onChange={(e) => handleContentChange(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Aklına gelen fikri, eksikliği veya iyileştirmeyi hemen yaz..."
+          onPaste={handlePaste}
+          placeholder="Aklına gelen fikri, eksikliği veya iyileştirmeyi hemen yaz... (Resim / Ekran görüntüsünü Ctrl+V ile direkt yapıştırabilirsin)"
           rows={compact ? 2 : 3}
           className="w-full resize-none p-3 text-sm md:text-base text-slate-800 placeholder-slate-400 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-slate-50/50 hover:bg-white focus:bg-white"
         />
+
+        {/* Hidden File Input for image attachment */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) {
+              handleFileUpload(file);
+              e.target.value = "";
+            }
+          }}
+        />
       </div>
+
+      {/* Image / Screenshot Preview & Upload Indicator */}
+      {(imageUrl || isUploading) && (
+        <div className="mt-2.5 flex items-center gap-3 p-2 bg-slate-50 border border-slate-200/80 rounded-xl">
+          {isUploading ? (
+            <div className="flex items-center gap-2 text-xs text-blue-600 font-medium py-1 px-2">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Görsel yükleniyor...</span>
+            </div>
+          ) : imageUrl ? (
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <img
+                  src={imageUrl}
+                  alt="Ekran Görüntüsü Önizleme"
+                  className="w-12 h-12 object-cover rounded-lg border border-slate-200 shadow-2xs"
+                />
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
+                    <ImageIcon className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Ekran Görüntüsü / Resim Eklendi</span>
+                  </p>
+                  <p className="text-[11px] text-slate-400 truncate">
+                    Not kaydedildiğinde bu görselle birlikte saklanacak
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setImageUrl(null)}
+                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors ml-2"
+                title="Görseli Kaldır"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ) : null}
+        </div>
+      )}
 
       {/* Bottom Bar: Category Pills & Submit Button */}
       <div className="flex flex-wrap items-center justify-between gap-2.5 mt-3 pt-1">
@@ -239,8 +364,19 @@ export function QuickNoteCard({
           })}
         </div>
 
-        {/* Action Controls: Priority & Save */}
+        {/* Action Controls: Image attach, Priority & Save */}
         <div className="flex items-center gap-2 ml-auto w-full sm:w-auto justify-end">
+          {/* Upload / Attach Image Button */}
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition-colors"
+            title="Ekran görüntüsü veya resim seç"
+          >
+            <ImageIcon className="w-3.5 h-3.5 text-slate-500" />
+            <span className="hidden xs:inline">Görsel Ekle</span>
+          </button>
+
           {/* Priority Pill Picker */}
           <select
             value={priority}
@@ -256,9 +392,9 @@ export function QuickNoteCard({
           <button
             type="button"
             onClick={() => handleSubmit()}
-            disabled={!content.trim() || isSubmitting}
+            disabled={(!content.trim() && !imageUrl) || isSubmitting}
             className={`flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-xl text-xs md:text-sm font-semibold transition-all ${
-              content.trim() && !isSubmitting
+              (content.trim() || imageUrl) && !isSubmitting
                 ? "bg-blue-600 hover:bg-blue-700 text-white shadow-sm shadow-blue-500/20 active:scale-98"
                 : "bg-slate-100 text-slate-400 cursor-not-allowed"
             }`}

@@ -2,13 +2,15 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Plus, Search, Folder, ChevronRight } from "lucide-react";
+import { Plus, Search, Folder, ChevronRight, Trash2 } from "lucide-react";
 import { useApp } from "@/context/AppContext";
+import { useToast } from "@/components/Toast";
 import { ProjectIcon } from "@/components/ProjectIcon";
 import { formatTurkishRelativeTime, PROJECT_STATUSES } from "@/lib/utils";
 
 export default function ProjectsListPage() {
-  const { projects, setIsNewProjectModalOpen } = useApp();
+  const { projects, setIsNewProjectModalOpen, refreshProjects } = useApp();
+  const { success, error } = useToast();
   const [search, setSearch] = useState("");
 
   const filteredProjects = projects.filter((p) => {
@@ -79,7 +81,30 @@ export default function ProjectsListPage() {
                       </span>
                     </div>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-500 group-hover:translate-x-0.5 transition-all" />
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={async (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (window.confirm(`"${p.name}" projesini ve projeye ait TÜM NOTLARI kalıcı olarak silmek istediğinize emin misiniz?`)) {
+                          try {
+                            const res = await fetch(`/api/projects/${p.id}`, { method: "DELETE" });
+                            if (!res.ok) throw new Error("Silinemedi");
+                            success(`"${p.name}" projesi kalıcı olarak silindi.`);
+                            await refreshProjects();
+                          } catch {
+                            error("Proje silinirken hata oluştu.");
+                          }
+                        }
+                      }}
+                      className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                      title="Projeyi Kalıcı Sil"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                    <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-500 group-hover:translate-x-0.5 transition-all" />
+                  </div>
                 </div>
 
                 {p.description && (

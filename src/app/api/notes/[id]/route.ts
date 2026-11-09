@@ -16,7 +16,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     }
 
     const body = await req.json();
-    const { content, category, status, priority, isPinned, projectId } = body;
+    const { content, category, status, priority, isPinned, projectId, imageUrl } = body;
 
     // If moving to another project, verify user owns target project
     if (projectId && projectId !== existing.projectId) {
@@ -37,6 +37,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
         priority: priority !== undefined ? priority : undefined,
         isPinned: isPinned !== undefined ? Boolean(isPinned) : undefined,
         projectId: projectId !== undefined ? projectId : undefined,
+        imageUrl: imageUrl !== undefined ? (imageUrl ? String(imageUrl).trim() : null) : undefined,
       },
       include: {
         project: {

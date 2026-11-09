@@ -82,6 +82,7 @@ export async function POST(req: Request) {
     const {
       projectId,
       content,
+      imageUrl,
       category = "general",
       priority = "normal",
       isPinned = false,
@@ -130,6 +131,7 @@ export async function POST(req: Request) {
           projectId: targetProjectId,
           userId: user.id,
           content: content.trim(),
+          imageUrl: imageUrl ? String(imageUrl).trim() : null,
           category,
           priority,
           isPinned: Boolean(isPinned),

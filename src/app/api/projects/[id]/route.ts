@@ -200,19 +200,42 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
 
     const existing = await prisma.project.findFirst({
       where: { id: params.id, userId: user.id },
+      include: {
+        notes: {
+          select: { id: true, imageUrl: true },
+        },
+      },
     });
 
     if (!existing) {
       return NextResponse.json({ error: "Proje bulunamadı." }, { status: 404 });
     }
 
-    // Soft delete
-    await prisma.project.update({
-      where: { id: params.id },
-      data: { deletedAt: new Date(), status: "archived" },
+    const { searchParams } = new URL(req.url);
+    const isArchiveOnly = searchParams.get("archive") === "true";
+
+    if (isArchiveOnly) {
+      // Soft-delete / Archive
+      await prisma.project.update({
+        where: { id: params.id },
+        data: { deletedAt: new Date(), status: "archived", archivedAt: new Date() },
+      });
+      return NextResponse.json({ success: true, message: "Proje arşive taşındı." });
+    }
+
+    // Permanent cascade delete: removes notes, credentials, links, tags, and project completely
+    await prisma.$transaction(async (tx) => {
+      await tx.note.deleteMany({ where: { projectId: params.id } });
+      await tx.projectCredential.deleteMany({ where: { projectId: params.id } });
+      await tx.projectLink.deleteMany({ where: { projectId: params.id } });
+      await tx.projectTag.deleteMany({ where: { projectId: params.id } });
+      await tx.project.delete({ where: { id: params.id } });
     });
 
-    return NextResponse.json({ success: true, message: "Proje arşive taşındı." });
+    return NextResponse.json({
+      success: true,
+      message: "Proje ve bağlı tüm notlar, içerikler ve kayıtlar kalıcı olarak silindi.",
+    });
   } catch (error) {
     console.error("Project DELETE error:", error);
     return NextResponse.json({ error: "Proje silinemedi." }, { status: 500 });

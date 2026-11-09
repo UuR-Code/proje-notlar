@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, Check, Eye, EyeOff } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { X, Check, Eye, EyeOff, Trash2 } from "lucide-react";
 import { useToast } from "./Toast";
 import { useApp } from "@/context/AppContext";
 
@@ -13,6 +14,7 @@ interface EditProjectModalProps {
 }
 
 export function EditProjectModal({ project, isOpen, onClose, onSuccess }: EditProjectModalProps) {
+  const router = useRouter();
   const { refreshProjects } = useApp();
   const { success, error } = useToast();
 
@@ -90,6 +92,27 @@ export function EditProjectModal({ project, isOpen, onClose, onSuccess }: EditPr
       onClose();
     } catch (err: any) {
       error(err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteProject = async () => {
+    if (!project?.id) return;
+    const confirmText = `"${project.name}" projesini ve projeye ait TÜM NOTLARI, bağlantıları ve şifreleri kalıcı olarak silmek istediğinize emin misiniz?\n\nBu işlem geri alınamaz!`;
+    if (!window.confirm(confirmText)) return;
+
+    try {
+      setIsSubmitting(true);
+      const res = await fetch(`/api/projects/${project.id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Proje silinemedi.");
+
+      success(`"${project.name}" projesi ve tüm bağlı verileri tamamen silindi.`);
+      await refreshProjects();
+      onClose();
+      router.push("/projects");
+    } catch (err: any) {
+      error(err.message || "Proje silinirken hata oluştu.");
     } finally {
       setIsSubmitting(false);
     }
@@ -267,22 +290,34 @@ export function EditProjectModal({ project, isOpen, onClose, onSuccess }: EditPr
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
+          <div className="flex items-center justify-between gap-2 pt-4 border-t border-slate-100">
             <button
               type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-xl"
-            >
-              İptal
-            </button>
-            <button
-              type="submit"
+              onClick={handleDeleteProject}
               disabled={isSubmitting}
-              className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs"
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 rounded-xl transition-colors"
             >
-              <Check className="w-3.5 h-3.5" />
-              <span>{isSubmitting ? "Kaydediliyor..." : "Kaydet"}</span>
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Projeyi Kalıcı Sil</span>
             </button>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-xl"
+              >
+                İptal
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs"
+              >
+                <Check className="w-3.5 h-3.5" />
+                <span>{isSubmitting ? "Kaydediliyor..." : "Kaydet"}</span>
+              </button>
+            </div>
           </div>
         </form>
       </div>
