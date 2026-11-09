@@ -3,6 +3,8 @@
  * Verifies all 24 requirements from User Request Section 15.
  */
 
+export {};
+
 const BASE_URL = "http://localhost:3000";
 
 async function runTests() {
