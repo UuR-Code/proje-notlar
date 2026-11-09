@@ -5,9 +5,10 @@ FROM node:20-alpine AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
+ENV NODE_ENV=development
 COPY package*.json ./
 COPY prisma ./prisma/
-RUN npm ci
+RUN npm ci --include=dev
 
 # ----------------------------------------------------
 # 2. Builder
@@ -34,7 +35,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-RUN apk add --no-cache curl
+RUN apk add --no-cache curl su-exec
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
@@ -52,8 +53,6 @@ RUN chmod +x ./docker-entrypoint.sh
 
 # Setup persistent db storage directory
 RUN mkdir -p /app/data && chown -R nextjs:nodejs /app/data
-
-USER nextjs
 
 EXPOSE 3000
 
