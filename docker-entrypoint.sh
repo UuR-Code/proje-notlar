@@ -14,9 +14,10 @@ su-exec nextjs ./node_modules/.bin/prisma db push --skip-generate || ./node_modu
 # Seed database on first launch
 if [ ! -f "/app/data/.seeded" ]; then
   echo "Başlangıç verileri yükleniyor..."
-  su-exec nextjs ./node_modules/.bin/tsx prisma/seed.ts || ./node_modules/.bin/tsx prisma/seed.ts || true
-  touch /app/data/.seeded
-  chown nextjs:nodejs /app/data/.seeded 2>/dev/null || true
+  if su-exec nextjs ./node_modules/.bin/tsx prisma/seed.ts; then
+    touch /app/data/.seeded
+    chown nextjs:nodejs /app/data/.seeded 2>/dev/null || true
+  fi
 fi
 
 echo "Next.js sunucusu başlatılıyor (Port: ${PORT:-3000})..."
