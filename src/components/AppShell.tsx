@@ -8,6 +8,8 @@ import { Header } from "./Header";
 import { BottomNav } from "./BottomNav";
 import { NewProjectModal } from "./NewProjectModal";
 import { GlobalSearchModal } from "./GlobalSearchModal";
+import { OfflineIndicator } from "./OfflineIndicator";
+import { PWAInstallBanner } from "./PWAInstallBanner";
 import { usePathname } from "next/navigation";
 
 function ShellInner({ children }: { children: React.ReactNode }) {
@@ -19,20 +21,26 @@ function ShellInner({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50">
-      {/* Desktop Left Sidebar */}
-      <Sidebar className="hidden md:flex shrink-0" />
+    <div className="flex h-screen overflow-hidden bg-slate-50 flex-col">
+      <OfflineIndicator />
+      <div className="flex-1 flex overflow-hidden">
+        {/* Desktop Left Sidebar */}
+        <Sidebar className="hidden md:flex shrink-0" />
 
-      {/* Main Content Pane */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <Header />
-        <main className="flex-1 overflow-y-auto px-4 md:px-8 py-6 pb-24 md:pb-10">
-          <div className="max-w-6xl mx-auto w-full">{children}</div>
-        </main>
+        {/* Main Content Pane */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          <Header />
+          <main className="flex-1 overflow-y-auto px-4 md:px-8 py-6 pb-24 md:pb-10">
+            <div className="max-w-6xl mx-auto w-full">{children}</div>
+          </main>
+        </div>
       </div>
 
       {/* Mobile Bottom Navigation */}
       <BottomNav />
+
+      {/* PWA Install Banner */}
+      <PWAInstallBanner />
 
       {/* Modals */}
       <NewProjectModal />

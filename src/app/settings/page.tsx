@@ -1,13 +1,38 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import { Settings, Download, Upload, User, Lock, Check, LogOut, FileSpreadsheet, Database } from "lucide-react";
+import { Settings, Download, Upload, User, Lock, Check, LogOut, FileSpreadsheet, Database, Smartphone, Wifi, RefreshCw, CheckCircle2 } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { useToast } from "@/components/Toast";
+import { usePWA } from "@/hooks/usePWA";
 
 export default function SettingsPage() {
   const { currentUser, refreshUser, refreshProjects } = useApp();
   const { success, error } = useToast();
+  const { isInstallable, isInstalled, isIOS, isOnline, installApp } = usePWA();
+  const [isUpdatingCache, setIsUpdatingCache] = useState(false);
+
+  const handleUpdateCache = async () => {
+    try {
+      setIsUpdatingCache(true);
+      if ("serviceWorker" in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        for (const reg of regs) {
+          await reg.update();
+        }
+      }
+      if ("caches" in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      }
+      success("Uygulama önbelleği yenilendi. Sayfa güncelleniyor...");
+      setTimeout(() => window.location.reload(), 1000);
+    } catch {
+      error("Önbellek güncellenirken bir hata oluştu.");
+    } finally {
+      setIsUpdatingCache(false);
+    }
+  };
 
   const [name, setName] = useState(currentUser?.name || "");
   const [currentPassword, setCurrentPassword] = useState("");
@@ -266,6 +291,84 @@ export default function SettingsPage() {
                 <span>{isImporting ? "Yükleniyor ve Doğrulanıyor..." : "JSON Yedek Dosyası Seç"}</span>
               </button>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* PWA & Offline Usage Card */}
+      <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-card space-y-5">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+            <Smartphone className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-slate-800">Uygulama (PWA) ve Çevrimdışı Mod</h3>
+            <p className="text-xs text-slate-500">Masaüstü veya mobil cihazınıza tam ekran uygulama olarak kurun.</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="p-4 bg-slate-50 rounded-xl border border-slate-200/60 flex flex-col justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                {isInstalled ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Yüklü (Standalone)
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-100 text-blue-800">
+                    <Smartphone className="w-3.5 h-3.5" /> Tarayıcı Modu
+                  </span>
+                )}
+              </div>
+              <h4 className="text-xs font-bold text-slate-800">Cihaza Kurulum</h4>
+              <p className="text-xs text-slate-500 mt-1">
+                {isInstalled
+                  ? "Proje Notları cihazınızda yüklü ve tam ekran yerel uygulama deneyimiyle çalışıyor."
+                  : "Uygulamayı ana ekranınıza ekleyerek tek tıkla açabilir, adres çubuğu olmadan tam ekran kullanabilirsiniz."}
+              </p>
+            </div>
+
+            {!isInstalled && isInstallable && (
+              <button
+                type="button"
+                onClick={installApp}
+                className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold transition-colors shadow-xs"
+              >
+                <Download className="w-4 h-4" />
+                <span>Uygulamayı Şimdi Yükle</span>
+              </button>
+            )}
+
+            {!isInstalled && isIOS && (
+              <p className="text-xs text-indigo-700 bg-indigo-50 p-2.5 rounded-lg border border-indigo-100 font-medium">
+                Safari&apos;de <strong>Paylaş</strong> simgesine dokunun ve <strong>Ana Ekrana Ekle</strong>&apos;yi seçin.
+              </p>
+            )}
+          </div>
+
+          <div className="p-4 bg-slate-50 rounded-xl border border-slate-200/60 flex flex-col justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800">
+                  <Wifi className="w-3.5 h-3.5" /> {isOnline ? "Çevrimiçi" : "Çevrimdışı"}
+                </span>
+              </div>
+              <h4 className="text-xs font-bold text-slate-800">Service Worker & Önbellek</h4>
+              <p className="text-xs text-slate-500 mt-1">
+                Uygulama dosyaları ve arayüz yerel önbellekte saklanır. İnternet kesintilerinde bile açılır.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              disabled={isUpdatingCache}
+              onClick={handleUpdateCache}
+              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-colors shadow-2xs"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-slate-500 ${isUpdatingCache ? "animate-spin" : ""}`} />
+              <span>{isUpdatingCache ? "Yenileniyor..." : "Önbelleği Temizle & Güncelle"}</span>
+            </button>
           </div>
         </div>
       </div>

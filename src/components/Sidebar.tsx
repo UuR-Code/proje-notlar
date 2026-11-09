@@ -14,10 +14,12 @@ import {
   Plus,
   Settings,
   LogOut,
+  Download,
 } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { ProjectIcon } from "./ProjectIcon";
 import { useToast } from "./Toast";
+import { usePWA } from "@/hooks/usePWA";
 
 interface SidebarProps {
   className?: string;
@@ -28,6 +30,7 @@ export function Sidebar({ className = "", onCloseMobile }: SidebarProps) {
   const pathname = usePathname();
   const { projects, setIsNewProjectModalOpen, currentUser } = useApp();
   const { success } = useToast();
+  const { isInstallable, isInstalled, installApp } = usePWA();
 
   const navItems = [
     { label: "Projeler & Notlar", href: "/", icon: Folder },
@@ -138,6 +141,20 @@ export function Sidebar({ className = "", onCloseMobile }: SidebarProps) {
           </div>
         </div>
       </div>
+
+      {/* PWA Install Button */}
+      {!isInstalled && isInstallable && (
+        <div className="px-4 py-2 border-t border-slate-100">
+          <button
+            type="button"
+            onClick={installApp}
+            className="flex items-center justify-center gap-2 w-full py-2 px-3 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold transition-colors shadow-2xs"
+          >
+            <Download className="w-3.5 h-3.5 text-blue-600" />
+            <span>Uygulamayı Yükle</span>
+          </button>
+        </div>
+      )}
 
       {/* User Footer */}
       <div className="p-4 border-t border-slate-100 flex items-center justify-between gap-2">
